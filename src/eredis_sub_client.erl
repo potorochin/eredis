@@ -119,7 +119,10 @@ handle_cast({ack_message, Pid},
 
 handle_cast({subscribe, Pid, Channels}, #state{controlling_process = {_, Pid}} = State) ->
     Command = eredis:create_multibulk(["SUBSCRIBE" | Channels]),
-    ok = gen_tcp:send(State#state.socket, Command),
+    case State#state.socket of
+        {_,{_,_,_,_},_}  -> ssl:send(State#state.socket, Command);
+        _ -> gen_tcp:send(State#state.socket, Command)
+    end,
     NewChannels = add_channels(Channels, State#state.channels),
     {noreply, State#state{channels = NewChannels}};
 
@@ -129,8 +132,7 @@ handle_cast({psubscribe, Pid, Channels}, #state{controlling_process = {_, Pid}} 
     case State#state.socket of
         {_,{_,_,_,_},_}  -> ssl:send(State#state.socket, Command);
         _ -> gen_tcp:send(State#state.socket, Command)
-    end, 
-
+    end,
     NewChannels = add_channels(Channels, State#state.channels),
     {noreply, State#state{channels = NewChannels}};
 
@@ -138,7 +140,10 @@ handle_cast({psubscribe, Pid, Channels}, #state{controlling_process = {_, Pid}} 
 
 handle_cast({unsubscribe, Pid, Channels}, #state{controlling_process = {_, Pid}} = State) ->
     Command = eredis:create_multibulk(["UNSUBSCRIBE" | Channels]),
-    ok = gen_tcp:send(State#state.socket, Command),
+    case State#state.socket of
+        {_,{_,_,_,_},_}  -> ssl:send(State#state.socket, Command);
+        _ -> gen_tcp:send(State#state.socket, Command)
+    end,
     NewChannels = remove_channels(Channels, State#state.channels),
     {noreply, State#state{channels = NewChannels}};
 
@@ -146,7 +151,10 @@ handle_cast({unsubscribe, Pid, Channels}, #state{controlling_process = {_, Pid}}
 
 handle_cast({punsubscribe, Pid, Channels}, #state{controlling_process = {_, Pid}} = State) ->
     Command = eredis:create_multibulk(["PUNSUBSCRIBE" | Channels]),
-    ok = gen_tcp:send(State#state.socket, Command),
+    case State#state.socket of
+        {_,{_,_,_,_},_}  -> ssl:send(State#state.socket, Command);
+        _ -> gen_tcp:send(State#state.socket, Command)
+    end,
     NewChannels = remove_channels(Channels, State#state.channels),
     {noreply, State#state{channels = NewChannels}};
 
@@ -162,7 +170,7 @@ handle_cast(_Msg, State) ->
 %% Receive data from socket, see handle_response/2
 handle_info({Type, _Socket, Bs}, State) when Type =:= tcp orelse Type =:= ssl ->
     
-     case State#state.socket of
+    case State#state.socket of
         {_,{_,_,_,_},_}  -> ssl:setopts(State#state.socket, [{active, once}]);
         _ -> inet:setopts(tls_socket(State#state.socket), [{active, once}])
     end, 
@@ -395,7 +403,12 @@ reconnect_loop(Client, #state{reconnect_sleep=ReconnectSleep}=State) ->
     Client ! reconnect_attempt,
     case catch(connect(State)) of
         {ok, #state{socket = Socket}} ->
-            gen_tcp:controlling_process(Socket, Client),
+            
+            % gen_tcp:controlling_process(Socket, Client),
+            case Socket of
+                {_,{_,_,_,_},_}  -> ssl:controlling_process(Socket, Client);
+                _ -> gen_tcp:controlling_process(Socket, Client)
+            end, 
             Client ! {connection_ready, Socket};
         {error, Reason} ->
             Client ! {reconnect_failed, Reason},
