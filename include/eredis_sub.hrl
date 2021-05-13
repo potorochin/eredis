@@ -26,5 +26,14 @@
           % The msg_state keeps track of whether we are waiting
           % for the controlling process to acknowledge the last
           % message.
-          msg_state = need_ack :: ready | need_ack
+          socket_options  :: list(),
+          msg_state = need_ack :: ready | need_ack,
+          tls_options     :: list(),
+
+          connect_timeout :: integer() | undefined,
+          transport       :: gen_tcp | ssl,
+          queue           :: eredis_queue() | undefined,
+          auth_cmd        :: iodata() | undefined,
+          database        :: binary() | undefined
 }).
+

@@ -36,17 +36,39 @@ start_link(Host, Port, Password, ReconnectSleep,
     eredis_sub_client:start_link(Host, Port, Password, ReconnectSleep,
                                  MaxQueueSize, QueueBehaviour).
 
+
+
+start_link(Host, Port, Password, ReconnectSleep,
+            MaxQueueSize, QueueBehaviour, TlsOptions, Transport)
+when is_list(Host) andalso
+        is_integer(Port) andalso
+        is_list(Password) andalso
+        (is_integer(ReconnectSleep) orelse ReconnectSleep =:= no_reconnect) andalso
+        (is_integer(MaxQueueSize) orelse MaxQueueSize =:= infinity) andalso
+        (QueueBehaviour =:= drop orelse QueueBehaviour =:= exit) ->
+            
+    eredis_sub_client:start_link(Host, Port, Password, ReconnectSleep,
+                                MaxQueueSize, QueueBehaviour, TlsOptions, Transport).
+                            
+
+
 %% @doc: Callback for starting from poolboy
 -spec start_link(options()) -> {ok, Pid::pid()} | {error, Reason::term()}.
 start_link(Args) ->
+    
     Host           = proplists:get_value(host, Args, "127.0.0.1"),
     Port           = proplists:get_value(port, Args, 6379),
     Password       = proplists:get_value(password, Args, ""),
     ReconnectSleep = proplists:get_value(reconnect_sleep, Args, 100),
     MaxQueueSize   = proplists:get_value(max_queue_size, Args, infinity),
     QueueBehaviour = proplists:get_value(queue_behaviour, Args, drop),
+    TlsOptions     = proplists:get_value(tls, Args, []),
+    Transport      = case TlsOptions of
+                         [] -> gen_tcp;
+                         _ -> ssl
+                     end,
     start_link(Host, Port, Password, ReconnectSleep,
-               MaxQueueSize, QueueBehaviour).
+               MaxQueueSize, QueueBehaviour, TlsOptions, Transport).
 
 stop(Pid) ->
     eredis_sub_client:stop(Pid).
