@@ -101,7 +101,7 @@ init(Options) ->
                    socket = undefined,
                    parser_state = eredis_parser:init(),
                    queue = queue:new()},
-    io:format("~n~n~p~n~n", [get_auth_command(Username, Password)]),
+                   
 
     case ReconnectSleep of
         no_reconnect ->
@@ -467,10 +467,8 @@ authenticate(Socket, TransportType, AuthCmd) ->
 do_sync_command(Socket, Transport, Command) ->
     case setopts(Socket, Transport, [{active, false}]) of
         ok ->
-            io:format("~n~n~n do_sync_command: ok~n~n~n"),
             do_sync_command2(Socket, Transport, Command);
         {error, Reason} ->
-            io:format("~n~n~n do_sync_command: ~p~n~n~n", [{error, Reason}]),
             {error, Reason}
     end.
 
